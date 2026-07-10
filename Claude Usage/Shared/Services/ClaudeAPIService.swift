@@ -243,7 +243,16 @@ class ClaudeAPIService: APIServiceProtocol {
             }
 
             var request = URLRequest(url: url)
-            request.setValue("sessionKey=\(sessionKey)", forHTTPHeaderField: "Cookie")
+            // Attach Cloudflare clearance cookies when available — claude.ai
+            // answers cookie-less API clients with a 403 "Just a moment..."
+            // challenge page (same treatment as performRequest).
+            var cookiePairs = ["sessionKey=\(sessionKey)"]
+            if let stored = HTTPCookieStorage.shared.cookies(for: url) {
+                for cookie in stored where ["cf_clearance", "__cf_bm"].contains(cookie.name) {
+                    cookiePairs.append("\(cookie.name)=\(cookie.value)")
+                }
+            }
+            request.setValue(cookiePairs.joined(separator: "; "), forHTTPHeaderField: "Cookie")
             request.setValue("application/json", forHTTPHeaderField: "Accept")
             request.setValue("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15", forHTTPHeaderField: "User-Agent")
             request.setValue("https://claude.ai", forHTTPHeaderField: "Referer")
@@ -336,6 +345,19 @@ class ClaudeAPIService: APIServiceProtocol {
                 }
 
             case 401, 403:
+                // A Cloudflare bot challenge is not an auth failure — the
+                // pasted key may be perfectly valid. Mark it so callers can
+                // warm up CF cookies and retry instead of reporting E3000.
+                let responsePreview = String(data: data, encoding: .utf8)?.prefix(200) ?? ""
+                if responsePreview.contains("Just a moment") || responsePreview.contains("cf-mitigated") {
+                    throw AppError(
+                        code: .apiUnauthorized,
+                        message: "Request blocked by Cloudflare protection.",
+                        technicalDetails: "\(AppError.cloudflareChallengeMarker)\nEndpoint: /organizations\nStatus: \(httpResponse.statusCode)\nCloudflare challenge page returned",
+                        isRecoverable: true,
+                        recoverySuggestion: "Your session key is likely still valid — the request was blocked by a bot check, not rejected as unauthorized."
+                    )
+                }
                 throw AppError.apiUnauthorized()
 
             case 429:
@@ -367,7 +389,12 @@ class ClaudeAPIService: APIServiceProtocol {
             do {
                 return try await testSessionKey(key)
             } catch {
-                guard AppError.wrap(error).code == .apiUnauthorized, attempt < maxAttempts else {
+                // Don't burn retries on a Cloudflare challenge: testSessionKey
+                // already ran the warm-up + one retry; repeating won't help.
+                let wrapped = AppError.wrap(error)
+                guard wrapped.code == .apiUnauthorized,
+                      !wrapped.isCloudflareChallenge,
+                      attempt < maxAttempts else {
                     throw error
                 }
                 try? await Task.sleep(nanoseconds: UInt64(attempt) * 1_500_000_000)
@@ -383,7 +410,17 @@ class ClaudeAPIService: APIServiceProtocol {
         let validatedKey = try sessionKeyValidator.validate(key)
 
         // Fetch organizations using the test key (don't save it)
-        let organizations = try await fetchAllOrganizations(sessionKey: validatedKey)
+        let organizations: [AccountInfo]
+        do {
+            organizations = try await fetchAllOrganizations(sessionKey: validatedKey)
+        } catch let error as AppError where error.isCloudflareChallenge {
+            // Typical for a manually pasted key: no CF clearance cookies exist
+            // because the sign-in webview never ran. Solve the challenge in an
+            // off-screen webview once, then retry.
+            LoggingService.shared.log("testSessionKey: Cloudflare challenge — running cookie warm-up")
+            _ = await CloudflareWarmupService.shared.warmUp()
+            organizations = try await fetchAllOrganizations(sessionKey: validatedKey)
+        }
 
         LoggingService.shared.logInfo("Tested session key - found \(organizations.count) organization(s)")
 
@@ -512,9 +549,20 @@ class ClaudeAPIService: APIServiceProtocol {
 
             return claudeUsage
 
-        case .cliOAuth:
-            // The dedicated OAuth usage endpoint (api.anthropic.com/api/oauth/usage) is disabled.
-            // Instead, make a minimal Messages API call and extract usage from response headers.
+        case .cliOAuth(let accessToken):
+            // Preferred source: the dedicated OAuth usage endpoint. It returns
+            // the same body as the claude.ai web usage API — including the
+            // per-model limits[] entries (Fable/Opus/Sonnet/Design) that the
+            // rate-limit-header fallback below cannot express (verified live
+            // 2026-07: endpoint returns 200 with limits[] populated).
+            do {
+                return try await fetchUsageData(oauthAccessToken: accessToken)
+            } catch {
+                LoggingService.shared.log("ClaudeAPIService: OAuth usage endpoint failed (\(error.localizedDescription)) — falling back to Messages API headers")
+            }
+
+            // Fallback: make a minimal Messages API call and extract usage
+            // from the unified rate-limit response headers (no per-model data).
             LoggingService.shared.log("ClaudeAPIService: Fetching usage via Messages API headers (OAuth)")
 
             guard let url = URL(string: "https://api.anthropic.com/v1/messages") else {
@@ -613,7 +661,7 @@ class ClaudeAPIService: APIServiceProtocol {
         }
     }
 
-    private func performRequest(endpoint: String, sessionKey: String) async throws -> Data {
+    private func performRequest(endpoint: String, sessionKey: String, didAttemptCloudflareWarmup: Bool = false) async throws -> Data {
         // Build URL safely
         let url = try URLBuilder(baseURL: baseURL)
             .appendingPath(endpoint)
@@ -710,12 +758,19 @@ class ClaudeAPIService: APIServiceProtocol {
             let responsePreview = String(data: data, encoding: .utf8)?.prefix(200) ?? "Unable to read response"
 
             // Cloudflare bot challenge, not an actual auth failure — the
-            // session key is fine, the request just got challenged.
+            // session key is fine, the request just got challenged. Try to
+            // earn clearance cookies in an off-screen webview once (cooldown
+            // guarded so the 30s refresh loop can't spawn webviews forever).
             if responsePreview.contains("Just a moment") || responsePreview.contains("cf-mitigated") {
+                if !didAttemptCloudflareWarmup && CloudflareWarmupService.shared.canAttempt {
+                    LoggingService.shared.log("performRequest: Cloudflare challenge on \(endpoint) — running cookie warm-up")
+                    _ = await CloudflareWarmupService.shared.warmUp()
+                    return try await performRequest(endpoint: endpoint, sessionKey: sessionKey, didAttemptCloudflareWarmup: true)
+                }
                 throw AppError(
                     code: .apiUnauthorized,
                     message: "Request blocked by Cloudflare protection.",
-                    technicalDetails: "Endpoint: \(endpoint)\nStatus: \(httpResponse.statusCode)\nCloudflare challenge page returned",
+                    technicalDetails: "\(AppError.cloudflareChallengeMarker)\nEndpoint: \(endpoint)\nStatus: \(httpResponse.statusCode)\nCloudflare challenge page returned",
                     isRecoverable: true,
                     recoverySuggestion: "Your session key is likely still valid — this usually resolves on the next refresh. If it persists, re-sign-in via Settings to refresh Cloudflare cookies."
                 )

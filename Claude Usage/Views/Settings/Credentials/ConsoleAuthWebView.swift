@@ -128,6 +128,13 @@ struct ConsoleAuthWebView: NSViewRepresentable {
         private func searchForSessionCookie(in cookieStore: WKHTTPCookieStore) {
             cookieStore.getAllCookies { [weak self] cookies in
                 guard let self = self, !self.foundCookie else { return }
+                // Copy Cloudflare clearance cookies into the shared jar so the
+                // plain URLSession paths (key validation + usage fetches) can
+                // present them — claude.ai 403-challenges cookie-less clients.
+                for cookie in cookies where ["cf_clearance", "__cf_bm"].contains(cookie.name)
+                    && cookie.domain.contains("claude.ai") {
+                    HTTPCookieStorage.shared.setCookie(cookie)
+                }
                 for cookie in cookies {
                     if cookie.name == "sessionKey" && cookie.domain.contains(self.cookieDomain) {
                         self.foundCookie = true

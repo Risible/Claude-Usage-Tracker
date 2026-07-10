@@ -208,6 +208,8 @@ final class CodexMenuBarController: NSObject, ObservableObject {
         let isDarkMode = button.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
         let image = Self.renderIcon(
             weeklyPercentage: usage.map { $0.weeklyPercentage },
+            weeklyResetTime: usage?.weeklyResetTime,
+            weeklyWindowSeconds: usage?.weeklyWindowSeconds ?? 7 * 24 * 3600,
             isDarkMode: isDarkMode
         )
         image.isTemplate = false
@@ -215,11 +217,16 @@ final class CodexMenuBarController: NSObject, ObservableObject {
     }
 
     /// Draws the Codex status icon: the OpenAI mark inside a circular weekly
-    /// progress ring — same geometry and status colors as the Claude metric's
-    /// "Icon with Bar" ring style, so the two items read as siblings while the
-    /// center mark tells them apart. While loading (or on error) only the
-    /// background ring is drawn.
-    private static func renderIcon(weeklyPercentage: Double?, isDarkMode: Bool) -> NSImage {
+    /// progress ring — same geometry, status colors, and week-elapsed tick
+    /// mark as the Claude metric's "Icon with Bar" ring style, so the two
+    /// items read as siblings while the center mark tells them apart. While
+    /// loading (or on error) only the background ring is drawn.
+    private static func renderIcon(
+        weeklyPercentage: Double?,
+        weeklyResetTime: Date?,
+        weeklyWindowSeconds: TimeInterval,
+        isDarkMode: Bool
+    ) -> NSImage {
         let circleSize: CGFloat = 22
         let totalWidth = circleSize + 1
         let foregroundColor: NSColor = isDarkMode ? .white : .black
@@ -274,6 +281,34 @@ final class CodexMenuBarController: NSObject, ObservableObject {
             arcPath.lineWidth = 3.0
             arcPath.lineCapStyle = .round
             arcPath.stroke()
+        }
+
+        // Week-elapsed tick mark on the ring (clockwise from 12 o'clock),
+        // pace-colored like the Claude ring's marker.
+        if let elapsed = UsageStatusCalculator.elapsedFraction(
+            resetTime: weeklyResetTime,
+            duration: weeklyWindowSeconds,
+            showRemaining: false
+        ) {
+            let tickAngle = (90 - 360 * CGFloat(elapsed)) * .pi / 180
+            let innerR = radius - 2.0
+            let outerR = radius + 2.0
+            let tickPath = NSBezierPath()
+            tickPath.move(to: NSPoint(
+                x: center.x + innerR * cos(tickAngle),
+                y: center.y + innerR * sin(tickAngle)
+            ))
+            tickPath.line(to: NSPoint(
+                x: center.x + outerR * cos(tickAngle),
+                y: center.y + outerR * sin(tickAngle)
+            ))
+            let pace = weeklyPercentage.flatMap {
+                PaceStatus.calculate(usedPercentage: $0, elapsedFraction: elapsed)
+            }
+            (pace?.color ?? foregroundColor).setStroke()
+            tickPath.lineWidth = 2.0
+            tickPath.lineCapStyle = .round
+            tickPath.stroke()
         }
 
         // OpenAI mark in the center (preserve its 18:17 aspect ratio)
