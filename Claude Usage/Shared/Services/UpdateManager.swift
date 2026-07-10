@@ -44,6 +44,12 @@ final class UpdateUserDriver: NSObject, SPUStandardUserDriverDelegate {
 final class UpdateManager: ObservableObject {
     static let shared = UpdateManager()
 
+    /// This fork is updated by rebuilding from source (Risible fork CI), not
+    /// via upstream's Sparkle feed — accepting a stock release would silently
+    /// replace every fork customization. Keep the updater dormant: never
+    /// started, no scheduled checks, manual check is a no-op.
+    private static let sparkleUpdatesEnabled = false
+
     private let updaterController: SPUStandardUpdaterController
     private let userDriver: UpdateUserDriver // Keep strong reference
 
@@ -56,25 +62,35 @@ final class UpdateManager: ObservableObject {
 
         // Initialize Sparkle updater with user driver delegate
         updaterController = SPUStandardUpdaterController(
-            startingUpdater: true,
+            startingUpdater: Self.sparkleUpdatesEnabled,
             updaterDelegate: nil,
             userDriverDelegate: userDriver
         )
 
-        automaticChecksEnabled = updaterController.updater.automaticallyChecksForUpdates
-        canCheckForUpdates = updaterController.updater.canCheckForUpdates
-
-        LoggingService.shared.logInfo("Update manager initialized with gentle reminders")
+        if Self.sparkleUpdatesEnabled {
+            automaticChecksEnabled = updaterController.updater.automaticallyChecksForUpdates
+            canCheckForUpdates = updaterController.updater.canCheckForUpdates
+            LoggingService.shared.logInfo("Update manager initialized with gentle reminders")
+        } else {
+            automaticChecksEnabled = false
+            canCheckForUpdates = false
+            LoggingService.shared.logInfo("Update manager dormant (fork build — updates come from source)")
+        }
     }
 
     /// Manually check for updates
     func checkForUpdates() {
+        guard Self.sparkleUpdatesEnabled else {
+            LoggingService.shared.logInfo("Update check ignored — updater is dormant in this fork build")
+            return
+        }
         updaterController.checkForUpdates(nil)
         LoggingService.shared.logInfo("Manual update check triggered")
     }
 
     /// Toggle automatic update checks
     func setAutomaticChecksEnabled(_ enabled: Bool) {
+        guard Self.sparkleUpdatesEnabled else { return }
         updaterController.updater.automaticallyChecksForUpdates = enabled
         automaticChecksEnabled = enabled
         DataStore.shared.userDefaults.set(enabled, forKey: "SUEnableAutomaticChecks")
