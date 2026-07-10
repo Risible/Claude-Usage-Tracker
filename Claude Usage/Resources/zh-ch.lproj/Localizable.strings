@@ -984,3 +984,19 @@
 "notifications.sound.default" = "默认";
 "notifications.sound.none" = "无";
 "notifications.sound.preview" = "预览声音";
+
+/* Codex Tracker */
+"codex.title" = "Codex";
+"codex.session_usage" = "5 小时限额";
+"codex.weekly_usage" = "每周限额";
+"codex.loading" = "正在加载用量…";
+"codex.last_updated" = "更新于 %@";
+"codex.error.not_installed" = "未检测到 Codex CLI。请安装 Codex 并登录，然后在设置中重新启用跟踪器。";
+"codex.error.invalid_credentials" = "无法从 ~/.codex/auth.json 读取 Codex 登录信息。";
+"codex.error.auth_expired" = "Codex 登录已过期。请在终端运行 codex 以刷新。";
+"codex.error.network" = "网络错误：%@";
+"codex.error.parse" = "Codex 用量 API 返回了意外的响应。";
+"codex.settings_title" = "Codex 跟踪器";
+"codex.settings_desc" = "与 Claude 一起跟踪 OpenAI Codex 的用量。";
+"codex.settings_toggle" = "在菜单栏显示 Codex 用量";
+"codex.settings_toggle_desc" = "添加第二个菜单栏项目，显示 Codex 的 5 小时和每周限额，使用 ~/.codex 中的 Codex CLI 登录信息，无需单独登录。";

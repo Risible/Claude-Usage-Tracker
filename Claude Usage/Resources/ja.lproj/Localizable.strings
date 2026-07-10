@@ -986,3 +986,19 @@
 "notifications.sound.default" = "デフォルト";
 "notifications.sound.none" = "なし";
 "notifications.sound.preview" = "サウンドプレビュー";
+
+/* Codex Tracker */
+"codex.title" = "Codex";
+"codex.session_usage" = "5時間の上限";
+"codex.weekly_usage" = "週間上限";
+"codex.loading" = "使用状況を読み込み中…";
+"codex.last_updated" = "更新: %@";
+"codex.error.not_installed" = "Codex CLI が見つかりません。Codex をインストールしてサインインした後、設定でトラッカーを再度有効にしてください。";
+"codex.error.invalid_credentials" = "~/.codex/auth.json から Codex のサインイン情報を読み取れませんでした。";
+"codex.error.auth_expired" = "Codex のサインインが期限切れです。ターミナルで codex を実行して更新してください。";
+"codex.error.network" = "ネットワークエラー: %@";
+"codex.error.parse" = "Codex 使用状況 API から予期しない応答がありました。";
+"codex.settings_title" = "Codex トラッカー";
+"codex.settings_desc" = "Claude と並べて OpenAI Codex の使用状況を追跡します。";
+"codex.settings_toggle" = "メニューバーに Codex の使用状況を表示";
+"codex.settings_toggle_desc" = "Codex の5時間および週間の上限を表示する2つ目のメニューバー項目を追加します。~/.codex の Codex CLI サインインを使用するため、別途ログインは不要です。";

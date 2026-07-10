@@ -993,3 +993,19 @@
 "support.open_source_desc" = "Вихідний код публічно доступний на GitHub. Ви можете переглядати, змінювати та робити внески до проекту.";
 "support.no_tracking" = "Без відстеження";
 "support.no_tracking_desc" = "Ваша конфіденційність важлива. Жодної аналітики, телеметрії, збору даних. Все залишається на вашому Mac.";
+
+/* Codex Tracker */
+"codex.title" = "Codex";
+"codex.session_usage" = "5-годинний ліміт";
+"codex.weekly_usage" = "Тижневий ліміт";
+"codex.loading" = "Завантаження використання…";
+"codex.last_updated" = "Оновлено %@";
+"codex.error.not_installed" = "Codex CLI не знайдено. Встановіть Codex і ввійдіть, потім знову ввімкніть трекер у Налаштуваннях.";
+"codex.error.invalid_credentials" = "Не вдалося прочитати вхід Codex із ~/.codex/auth.json.";
+"codex.error.auth_expired" = "Сеанс Codex закінчився. Запустіть codex у терміналі, щоб оновити його.";
+"codex.error.network" = "Помилка мережі: %@";
+"codex.error.parse" = "Неочікувана відповідь від API використання Codex.";
+"codex.settings_title" = "Трекер Codex";
+"codex.settings_desc" = "Відстежуйте використання OpenAI Codex поряд із Claude.";
+"codex.settings_toggle" = "Показувати використання Codex у рядку меню";
+"codex.settings_toggle_desc" = "Додає другий елемент рядка меню з 5-годинним і тижневим лімітами Codex, використовуючи вхід Codex CLI з ~/.codex. Окремий вхід не потрібен.";

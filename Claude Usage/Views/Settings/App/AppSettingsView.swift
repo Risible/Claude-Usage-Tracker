@@ -11,6 +11,7 @@ struct AppSettingsView: View {
     @State private var launchAtLogin = LaunchAtLoginManager.shared.isEnabled
     @State private var peakHoursEnabled: Bool = SharedDataStore.shared.loadPeakHoursIndicatorEnabled()
     @State private var peakHoursMenuIconEnabled: Bool = SharedDataStore.shared.loadPeakHoursMenuIconEnabled()
+    @State private var codexTrackerEnabled: Bool = SharedDataStore.shared.loadCodexTrackerEnabled()
 
     var body: some View {
         ScrollView {
@@ -53,6 +54,18 @@ struct AppSettingsView: View {
                         .padding(.leading, 16)
                     }
                 }
+
+                SettingsSectionCard(
+                    title: "codex.settings_title".localized,
+                    subtitle: "codex.settings_desc".localized
+                ) {
+                    SettingToggle(
+                        title: "codex.settings_toggle".localized,
+                        description: "codex.settings_toggle_desc".localized,
+                        badge: .new,
+                        isOn: $codexTrackerEnabled
+                    )
+                }
             }
             .padding()
         }
@@ -66,6 +79,10 @@ struct AppSettingsView: View {
         .onChange(of: peakHoursMenuIconEnabled) { _, newValue in
             SharedDataStore.shared.savePeakHoursMenuIconEnabled(newValue)
             NotificationCenter.default.post(name: .peakHoursSettingChanged, object: nil)
+        }
+        .onChange(of: codexTrackerEnabled) { _, newValue in
+            SharedDataStore.shared.saveCodexTrackerEnabled(newValue)
+            NotificationCenter.default.post(name: .codexTrackerSettingChanged, object: nil)
         }
     }
 }

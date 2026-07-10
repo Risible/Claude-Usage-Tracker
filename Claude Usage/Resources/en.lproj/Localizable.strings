@@ -994,3 +994,19 @@
 "notifications.sound.default" = "Default";
 "notifications.sound.none" = "None";
 "notifications.sound.preview" = "Preview sound";
+
+/* Codex Tracker */
+"codex.title" = "Codex";
+"codex.session_usage" = "5-Hour Limit";
+"codex.weekly_usage" = "Weekly Limit";
+"codex.loading" = "Loading usage…";
+"codex.last_updated" = "Updated %@";
+"codex.error.not_installed" = "Codex CLI not detected. Install Codex and sign in, then re-enable the tracker in Settings.";
+"codex.error.invalid_credentials" = "Couldn't read the Codex sign-in from ~/.codex/auth.json.";
+"codex.error.auth_expired" = "Codex sign-in expired. Run codex in a terminal to refresh it.";
+"codex.error.network" = "Network error: %@";
+"codex.error.parse" = "Unexpected response from the Codex usage API.";
+"codex.settings_title" = "Codex Tracker";
+"codex.settings_desc" = "Track OpenAI Codex usage alongside Claude.";
+"codex.settings_toggle" = "Show Codex usage in the menu bar";
+"codex.settings_toggle_desc" = "Adds a second menu bar item with Codex's 5-hour and weekly limits, using the Codex CLI sign-in from ~/.codex. No separate login needed.";

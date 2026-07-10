@@ -29,4 +29,7 @@ extension Notification.Name {
 
     /// Posted when the peak hours indicator setting is toggled
     static let peakHoursSettingChanged = Notification.Name("peakHoursSettingChanged")
+
+    /// Posted when the Codex tracker setting is toggled
+    static let codexTrackerSettingChanged = Notification.Name("codexTrackerSettingChanged")
 }

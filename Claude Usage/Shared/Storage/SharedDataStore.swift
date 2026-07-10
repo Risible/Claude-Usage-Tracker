@@ -76,6 +76,9 @@ class SharedDataStore {
         static let timeFormatPreference = "timeFormatPreference"
         static let peakHoursIndicatorEnabled = "peakHoursIndicatorEnabled"
         static let peakHoursMenuIconEnabled = "peakHoursMenuIconEnabled"
+
+        // Codex Tracker
+        static let codexTrackerEnabled = "codexTrackerEnabled"
     }
 
     init() {
@@ -640,6 +643,21 @@ class SharedDataStore {
             return true
         }
         return defaults.bool(forKey: Keys.peakHoursMenuIconEnabled)
+    }
+
+    // MARK: - Codex Tracker
+
+    func saveCodexTrackerEnabled(_ enabled: Bool) {
+        defaults.set(enabled, forKey: Keys.codexTrackerEnabled)
+    }
+
+    func loadCodexTrackerEnabled() -> Bool {
+        if defaults.object(forKey: Keys.codexTrackerEnabled) == nil {
+            // Default ON — the status item only appears when ~/.codex/auth.json
+            // exists, so this is a no-op for users without the Codex CLI.
+            return true
+        }
+        return defaults.bool(forKey: Keys.codexTrackerEnabled)
     }
 
     // MARK: - Testing Helpers

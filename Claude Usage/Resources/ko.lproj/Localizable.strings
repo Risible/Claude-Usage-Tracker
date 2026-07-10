@@ -1046,3 +1046,19 @@
 "notifications.sound.default" = "기본값";
 "notifications.sound.none" = "없음";
 "notifications.sound.preview" = "소리 미리듣기";
+
+/* Codex Tracker */
+"codex.title" = "Codex";
+"codex.session_usage" = "5시간 한도";
+"codex.weekly_usage" = "주간 한도";
+"codex.loading" = "사용량 불러오는 중…";
+"codex.last_updated" = "업데이트: %@";
+"codex.error.not_installed" = "Codex CLI를 찾을 수 없습니다. Codex를 설치하고 로그인한 후 설정에서 트래커를 다시 활성화하세요.";
+"codex.error.invalid_credentials" = "~/.codex/auth.json에서 Codex 로그인 정보를 읽을 수 없습니다.";
+"codex.error.auth_expired" = "Codex 로그인이 만료되었습니다. 터미널에서 codex를 실행하여 갱신하세요.";
+"codex.error.network" = "네트워크 오류: %@";
+"codex.error.parse" = "Codex 사용량 API에서 예기치 않은 응답을 받았습니다.";
+"codex.settings_title" = "Codex 트래커";
+"codex.settings_desc" = "Claude와 함께 OpenAI Codex 사용량을 추적합니다.";
+"codex.settings_toggle" = "메뉴 막대에 Codex 사용량 표시";
+"codex.settings_toggle_desc" = "Codex의 5시간 및 주간 한도를 표시하는 두 번째 메뉴 막대 항목을 추가합니다. ~/.codex의 Codex CLI 로그인을 사용하므로 별도의 로그인이 필요 없습니다.";

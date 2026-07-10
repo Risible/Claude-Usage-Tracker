@@ -980,3 +980,19 @@
 "notifications.sound.default" = "Padrão";
 "notifications.sound.none" = "Nenhum";
 "notifications.sound.preview" = "Pré-visualizar som";
+
+/* Codex Tracker */
+"codex.title" = "Codex";
+"codex.session_usage" = "Limite de 5 horas";
+"codex.weekly_usage" = "Limite semanal";
+"codex.loading" = "Carregando uso…";
+"codex.last_updated" = "Atualizado %@";
+"codex.error.not_installed" = "CLI do Codex não encontrada. Instale o Codex e faça login, depois reative o rastreador em Ajustes.";
+"codex.error.invalid_credentials" = "Não foi possível ler o login do Codex em ~/.codex/auth.json.";
+"codex.error.auth_expired" = "Login do Codex expirado. Execute codex em um terminal para renová-lo.";
+"codex.error.network" = "Erro de rede: %@";
+"codex.error.parse" = "Resposta inesperada da API de uso do Codex.";
+"codex.settings_title" = "Rastreador do Codex";
+"codex.settings_desc" = "Acompanhe o uso do OpenAI Codex junto com o Claude.";
+"codex.settings_toggle" = "Mostrar uso do Codex na barra de menus";
+"codex.settings_toggle_desc" = "Adiciona um segundo item na barra de menus com os limites de 5 horas e semanal do Codex, usando o login da CLI do Codex em ~/.codex. Não requer login separado.";

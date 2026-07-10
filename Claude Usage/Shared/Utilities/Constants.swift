@@ -104,6 +104,21 @@ enum Constants {
         }
     }
 
+    // OpenAI Codex CLI paths
+    enum CodexPaths {
+        static var codexDirectory: URL {
+            // Codex CLI honors CODEX_HOME the way Claude Code honors CLAUDE_CONFIG_DIR
+            if let codexHome = ProcessInfo.processInfo.environment["CODEX_HOME"] {
+                return URL(fileURLWithPath: codexHome)
+            }
+            return ClaudePaths.homeDirectory.appendingPathComponent(".codex")
+        }
+
+        static var authFile: URL {
+            codexDirectory.appendingPathComponent("auth.json")
+        }
+    }
+
     // Refresh intervals (in seconds)
     enum RefreshIntervals {
         static let menuBar: TimeInterval = 30        // 30 seconds

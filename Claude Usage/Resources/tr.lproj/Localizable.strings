@@ -990,3 +990,19 @@
 "notifications.sound.default" = "Varsayılan";
 "notifications.sound.none" = "Yok";
 "notifications.sound.preview" = "Sesi önizle";
+
+/* Codex Tracker */
+"codex.title" = "Codex";
+"codex.session_usage" = "5 Saatlik Sınır";
+"codex.weekly_usage" = "Haftalık Sınır";
+"codex.loading" = "Kullanım yükleniyor…";
+"codex.last_updated" = "Güncellendi: %@";
+"codex.error.not_installed" = "Codex CLI bulunamadı. Codex'i kurup oturum açın, ardından Ayarlar'dan izleyiciyi yeniden etkinleştirin.";
+"codex.error.invalid_credentials" = "~/.codex/auth.json dosyasından Codex oturumu okunamadı.";
+"codex.error.auth_expired" = "Codex oturumunun süresi doldu. Yenilemek için terminalde codex çalıştırın.";
+"codex.error.network" = "Ağ hatası: %@";
+"codex.error.parse" = "Codex kullanım API'sinden beklenmeyen yanıt.";
+"codex.settings_title" = "Codex İzleyici";
+"codex.settings_desc" = "OpenAI Codex kullanımını Claude ile birlikte izleyin.";
+"codex.settings_toggle" = "Menü çubuğunda Codex kullanımını göster";
+"codex.settings_toggle_desc" = "Codex'in 5 saatlik ve haftalık sınırlarını gösteren ikinci bir menü çubuğu öğesi ekler; ~/.codex içindeki Codex CLI oturumunu kullanır. Ayrıca oturum açmak gerekmez.";

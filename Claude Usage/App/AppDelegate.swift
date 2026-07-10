@@ -4,6 +4,7 @@ import UserNotifications
 
 class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
     private var menuBarManager: MenuBarManager?
+    private var codexMenuBarController: CodexMenuBarController?
     private var setupWindow: NSWindow?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -41,6 +42,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         // would never appear. Creating it here guarantees the app has a working
         // `menuBarManager` reference even if the wizard never visibly opens.
         menuBarManager = MenuBarManager()
+
+        // Codex tracker is fully independent of the Claude menu bar items:
+        // it gates itself on its own settings toggle + ~/.codex/auth.json
+        // presence, so it's safe to create unconditionally (even when the
+        // setup wizard is showing or no Claude credentials exist).
+        codexMenuBarController = CodexMenuBarController()
 
         // Start 24-hour heartbeat ping to track active app usage
         HeartbeatService.shared.start()
@@ -218,6 +225,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     func applicationWillTerminate(_ notification: Notification) {
         // Cleanup
         menuBarManager?.cleanup()
+        codexMenuBarController?.cleanup()
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
