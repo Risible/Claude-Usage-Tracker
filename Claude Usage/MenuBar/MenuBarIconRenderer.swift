@@ -531,10 +531,15 @@ final class MenuBarIconRenderer {
         paceStatus: PaceStatus? = nil,
         showPaceMarker: Bool = false
     ) -> NSImage {
-        // For circle: make it bigger to fit S/W in center
+        // For circle: make it bigger to fit the mark in center
         let circleSize: CGFloat = showIconName ? 22 : 18  // Bigger when showing label
         let size: CGFloat = showIconName ? 22 : 18
         let totalWidth = circleSize + 1
+
+        // Prepare the tinted center mark BEFORE lockFocus (avoid nested focus)
+        let centerMark = showIconName
+            ? NSImage(named: "ClaudeMark")?.tinted(with: menuBarForegroundColor(isDarkMode: isDarkMode))
+            : nil
 
         let image = NSImage(size: NSSize(width: totalWidth, height: size))
 
@@ -603,17 +608,29 @@ final class MenuBarIconRenderer {
             drawPaceMarkerTick(tickPath, paceStatus: paceStatus, showPaceMarker: showPaceMarker, isDarkMode: isDarkMode)
         }
 
-        // Draw S/W in the CENTER of the circle
+        // Draw the Claude mark in the CENTER of the circle (S/W letter fallback)
         if showIconName {
-            let labelAttributes: [NSAttributedString.Key: Any] = [
-                .font: NSFont.systemFont(ofSize: 9, weight: .bold),
-                .foregroundColor: textColor
-            ]
-            let label = (metricType == .session ? "S" : "W") as NSString
-            let labelSize = label.size(withAttributes: labelAttributes)
-            let labelX = center.x - labelSize.width / 2
-            let labelY = center.y - labelSize.height / 2
-            label.draw(at: NSPoint(x: labelX, y: labelY), withAttributes: labelAttributes)
+            if let mark = centerMark {
+                // The tray-template mark has built-in padding, so a box nearly
+                // filling the ring's inner circle renders at a balanced size.
+                let markBox: CGFloat = circleSize - 7
+                mark.draw(in: NSRect(
+                    x: center.x - markBox / 2,
+                    y: center.y - markBox / 2,
+                    width: markBox,
+                    height: markBox
+                ))
+            } else {
+                let labelAttributes: [NSAttributedString.Key: Any] = [
+                    .font: NSFont.systemFont(ofSize: 9, weight: .bold),
+                    .foregroundColor: textColor
+                ]
+                let label = (metricType == .session ? "S" : "W") as NSString
+                let labelSize = label.size(withAttributes: labelAttributes)
+                let labelX = center.x - labelSize.width / 2
+                let labelY = center.y - labelSize.height / 2
+                label.draw(at: NSPoint(x: labelX, y: labelY), withAttributes: labelAttributes)
+            }
         }
 
         return image

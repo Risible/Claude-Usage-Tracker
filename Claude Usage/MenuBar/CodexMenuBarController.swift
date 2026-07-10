@@ -18,6 +18,8 @@ final class CodexMenuBarController: NSObject, ObservableObject {
     private var popover: NSPopover?
     private var settingsObserver: NSObjectProtocol?
     private var wakeObserver: NSObjectProtocol?
+    private var appearanceObserver: NSKeyValueObservation?
+    private var lastAppearanceName: NSAppearance.Name?
 
     /// Unique autosave name so macOS/Ice persist position separately from the
     /// Claude items (see StatusBarUIManager.autosavePrefix scheme).
@@ -90,6 +92,17 @@ final class CodexMenuBarController: NSObject, ObservableObject {
         statusItem = item
         updateIcon()
 
+        // Observe app-level appearance only — per-button effectiveAppearance
+        // KVO re-fires on every button.image set and loops forever (see
+        // StatusBarUIManager.observeAppearanceChanges).
+        appearanceObserver = NSApp.observe(\.effectiveAppearance, options: [.new]) { [weak self] _, change in
+            guard let self = self else { return }
+            let newName = change.newValue?.name
+            guard newName != self.lastAppearanceName else { return }
+            self.lastAppearanceName = newName
+            DispatchQueue.main.async { self.updateIcon() }
+        }
+
         refreshTimer = Timer.scheduledTimer(withTimeInterval: Self.refreshInterval, repeats: true) { [weak self] _ in
             self?.refresh()
         }
@@ -102,6 +115,8 @@ final class CodexMenuBarController: NSObject, ObservableObject {
     func cleanup() {
         refreshTimer?.invalidate()
         refreshTimer = nil
+        appearanceObserver?.invalidate()
+        appearanceObserver = nil
         popover?.close()
         popover = nil
         if let item = statusItem {
@@ -190,58 +205,88 @@ final class CodexMenuBarController: NSObject, ObservableObject {
 
     private func updateIcon() {
         guard let button = statusItem?.button else { return }
-        button.image = Self.renderIcon(
-            percentage: usage.map { $0.primaryPercentage },
-            hasError: lastError != nil && usage == nil
+        let isDarkMode = button.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+        let image = Self.renderIcon(
+            weeklyPercentage: usage.map { $0.weeklyPercentage },
+            isDarkMode: isDarkMode
         )
+        image.isTemplate = false
+        button.image = image
     }
 
-    /// Draws the Codex status icon: a `‹/›` code glyph plus the 5h-window
-    /// percentage. Rendered as a template image so it stays monochrome and
-    /// adapts to menu bar appearance automatically — visually distinct from
-    /// the colored Claude metric items.
-    private static func renderIcon(percentage: Double?, hasError: Bool) -> NSImage {
-        let text: String
-        if hasError {
-            text = "–"
-        } else if let percentage = percentage {
-            text = "\(Int(min(max(percentage, 0), 999)))%"
+    /// Draws the Codex status icon: the OpenAI mark inside a circular weekly
+    /// progress ring — same geometry and status colors as the Claude metric's
+    /// "Icon with Bar" ring style, so the two items read as siblings while the
+    /// center mark tells them apart. While loading (or on error) only the
+    /// background ring is drawn.
+    private static func renderIcon(weeklyPercentage: Double?, isDarkMode: Bool) -> NSImage {
+        let circleSize: CGFloat = 22
+        let totalWidth = circleSize + 1
+        let foregroundColor: NSColor = isDarkMode ? .white : .black
+
+        // OpenAI mark is full-bleed (no built-in padding like the Claude
+        // tray template), so it needs a smaller box to sit inside the ring.
+        let markBox: CGFloat = circleSize - 11
+        let mark = NSImage(named: "OpenAIMark")?.tinted(with: foregroundColor)
+
+        let statusColor: NSColor
+        if let percentage = weeklyPercentage {
+            switch UsageStatusCalculator.calculateStatus(
+                usedPercentage: percentage,
+                showRemaining: false,
+                elapsedFraction: nil
+            ) {
+            case .safe: statusColor = .systemGreen
+            case .moderate: statusColor = .systemOrange
+            case .critical: statusColor = .systemRed
+            }
         } else {
-            text = "…"
+            statusColor = foregroundColor
         }
 
-        let font = NSFont.monospacedDigitSystemFont(ofSize: 11, weight: .medium)
-        let attributes: [NSAttributedString.Key: Any] = [
-            .font: font,
-            .foregroundColor: NSColor.black
-        ]
-        let textSize = (text as NSString).size(withAttributes: attributes)
-
-        let symbolConfig = NSImage.SymbolConfiguration(pointSize: 10, weight: .semibold)
-        let symbol = NSImage(
-            systemSymbolName: "chevron.left.forwardslash.chevron.right",
-            accessibilityDescription: "Codex"
-        )?.withSymbolConfiguration(symbolConfig)
-        let symbolSize = symbol?.size ?? .zero
-
-        let spacing: CGFloat = 3
-        let height: CGFloat = 18
-        let width = symbolSize.width + spacing + textSize.width + 2
-
-        let image = NSImage(size: NSSize(width: width, height: height))
+        let image = NSImage(size: NSSize(width: totalWidth, height: circleSize))
         image.lockFocus()
-        symbol?.draw(in: NSRect(
-            x: 1,
-            y: (height - symbolSize.height) / 2,
-            width: symbolSize.width,
-            height: symbolSize.height
-        ))
-        (text as NSString).draw(
-            at: NSPoint(x: 1 + symbolSize.width + spacing, y: (height - textSize.height) / 2),
-            withAttributes: attributes
-        )
-        image.unlockFocus()
-        image.isTemplate = true
+        defer { image.unlockFocus() }
+
+        let center = NSPoint(x: 1 + circleSize / 2, y: circleSize / 2)
+        let radius = (circleSize - 4.0) / 2
+
+        // Background ring
+        let bgArcPath = NSBezierPath()
+        bgArcPath.appendArc(withCenter: center, radius: radius, startAngle: 0, endAngle: 360, clockwise: false)
+        foregroundColor.withAlphaComponent(0.15).setStroke()
+        bgArcPath.lineWidth = 3.0
+        bgArcPath.lineCapStyle = .round
+        bgArcPath.stroke()
+
+        // Weekly progress ring (clockwise from 12 o'clock)
+        let fraction = CGFloat(min(max((weeklyPercentage ?? 0) / 100.0, 0), 1))
+        if fraction > 0 {
+            let arcPath = NSBezierPath()
+            arcPath.appendArc(
+                withCenter: center,
+                radius: radius,
+                startAngle: 90,
+                endAngle: 90 - 360 * fraction,
+                clockwise: true
+            )
+            statusColor.setStroke()
+            arcPath.lineWidth = 3.0
+            arcPath.lineCapStyle = .round
+            arcPath.stroke()
+        }
+
+        // OpenAI mark in the center (preserve its 18:17 aspect ratio)
+        if let mark = mark {
+            let markHeight = markBox * 17.0 / 18.0
+            mark.draw(in: NSRect(
+                x: center.x - markBox / 2,
+                y: center.y - markHeight / 2,
+                width: markBox,
+                height: markHeight
+            ))
+        }
+
         return image
     }
 }

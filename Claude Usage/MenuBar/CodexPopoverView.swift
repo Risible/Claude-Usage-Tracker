@@ -48,8 +48,11 @@ struct CodexPopoverView: View {
 
     private var header: some View {
         HStack(spacing: 6) {
-            Image(systemName: "chevron.left.forwardslash.chevron.right")
-                .font(.system(size: 12, weight: .semibold))
+            Image("OpenAIMark")
+                .renderingMode(.template)
+                .resizable()
+                .scaledToFit()
+                .frame(width: 14, height: 14)
                 .foregroundColor(.primary)
 
             Text("codex.title".localized)
