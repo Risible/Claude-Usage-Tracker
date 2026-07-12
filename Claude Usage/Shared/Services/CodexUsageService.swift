@@ -134,13 +134,17 @@ final class CodexUsageService {
     // MARK: - Parsing
 
     /// Parses the wham/usage response. Static + internal for unit testing.
+    ///
+    /// Windows are classified by `limit_window_seconds`, not response
+    /// position: Plus sends 5h/weekly as primary/secondary, but Pro sends
+    /// the weekly window as `primary_window` with `secondary_window` null.
     static func parseUsage(from data: Data) throws -> CodexUsage {
         guard let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
               let rateLimit = json["rate_limit"] as? [String: Any] else {
             throw CodexUsageError.parseError
         }
 
-        func window(_ key: String) -> (percent: Double, reset: Date?, duration: TimeInterval?)? {
+        func window(_ key: String) -> CodexUsage.Window? {
             guard let w = rateLimit[key] as? [String: Any] else { return nil }
             let percent = (w["used_percent"] as? NSNumber)?.doubleValue ?? 0
             var reset: Date?
@@ -150,19 +154,32 @@ final class CodexUsageService {
                 reset = Date().addingTimeInterval(after)
             }
             let duration = (w["limit_window_seconds"] as? NSNumber)?.doubleValue
-            return (percent, reset, duration)
+            return CodexUsage.Window(percentage: percent, resetTime: reset, windowSeconds: duration)
         }
 
-        let primary = window("primary_window")
-        let secondary = window("secondary_window")
+        var session: CodexUsage.Window?
+        var weekly: CodexUsage.Window?
+
+        for (key, positionalIsWeekly) in [("primary_window", false), ("secondary_window", true)] {
+            guard let w = window(key) else { continue }
+            let isWeekly: Bool
+            if let seconds = w.windowSeconds {
+                // ≥2 days → weekly bucket; anything shorter → session bucket
+                isWeekly = seconds >= 2 * 86400
+            } else {
+                // No duration reported: fall back to positional convention
+                isWeekly = positionalIsWeekly
+            }
+            if isWeekly {
+                if weekly == nil { weekly = w }
+            } else {
+                if session == nil { session = w }
+            }
+        }
 
         return CodexUsage(
-            primaryPercentage: primary?.percent ?? 0,
-            primaryResetTime: primary?.reset,
-            primaryWindowSeconds: primary?.duration,
-            weeklyPercentage: secondary?.percent ?? 0,
-            weeklyResetTime: secondary?.reset,
-            weeklyWindowSeconds: secondary?.duration,
+            session: session,
+            weekly: weekly,
             planType: json["plan_type"] as? String,
             lastUpdated: Date()
         )

@@ -13,23 +13,29 @@ struct CodexPopoverView: View {
             Divider()
 
             if let usage = controller.usage {
-                UsageRow(
-                    title: "codex.session_usage".localized,
-                    subtitle: nil,
-                    usedPercentage: usage.primaryPercentage,
-                    showRemaining: false,
-                    resetTime: usage.primaryResetTime,
-                    periodDuration: usage.primaryWindowSeconds ?? 5 * 3600
-                )
+                // Only the windows the backend reports: Plus sends 5h + weekly,
+                // Pro sends weekly only.
+                if let session = usage.session {
+                    UsageRow(
+                        title: "codex.session_usage".localized,
+                        subtitle: nil,
+                        usedPercentage: session.percentage,
+                        showRemaining: false,
+                        resetTime: session.resetTime,
+                        periodDuration: session.windowSeconds ?? 5 * 3600
+                    )
+                }
 
-                UsageRow(
-                    title: "codex.weekly_usage".localized,
-                    subtitle: nil,
-                    usedPercentage: usage.weeklyPercentage,
-                    showRemaining: false,
-                    resetTime: usage.weeklyResetTime,
-                    periodDuration: usage.weeklyWindowSeconds ?? 7 * 24 * 3600
-                )
+                if let weekly = usage.weekly {
+                    UsageRow(
+                        title: "codex.weekly_usage".localized,
+                        subtitle: nil,
+                        usedPercentage: weekly.percentage,
+                        showRemaining: false,
+                        resetTime: weekly.resetTime,
+                        periodDuration: weekly.windowSeconds ?? 7 * 24 * 3600
+                    )
+                }
             } else if let error = controller.lastError {
                 errorContent(error)
             } else {

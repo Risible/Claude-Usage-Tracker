@@ -206,10 +206,11 @@ final class CodexMenuBarController: NSObject, ObservableObject {
     private func updateIcon() {
         guard let button = statusItem?.button else { return }
         let isDarkMode = button.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+        let window = usage?.menuBarWindow
         let image = Self.renderIcon(
-            weeklyPercentage: usage.map { $0.weeklyPercentage },
-            weeklyResetTime: usage?.weeklyResetTime,
-            weeklyWindowSeconds: usage?.weeklyWindowSeconds ?? 7 * 24 * 3600,
+            weeklyPercentage: window?.percentage,
+            weeklyResetTime: window?.resetTime,
+            weeklyWindowSeconds: window?.windowSeconds ?? 7 * 24 * 3600,
             isDarkMode: isDarkMode
         )
         image.isTemplate = false
